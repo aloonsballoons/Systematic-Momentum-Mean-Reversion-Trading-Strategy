@@ -1,0 +1,75 @@
+# =============================================================================
+# Systematic Momentum/Mean-Reversion Strategy — Configuration
+# All tunable parameters in one place for transparency & reproducibility.
+# Degrees of freedom count: reviewer can audit every choice here.
+# =============================================================================
+
+data:
+  start_date: "2005-01-01"
+  end_date: "2024-12-31"
+  universe_file: "data/universes/sp500_constituents.csv"
+  cache_dir: "data/raw"
+  processed_dir: "data/processed"
+  min_price: 5.0          # USD — filter penny stocks
+  min_adv: 1000000.0      # USD — minimum average daily volume
+  max_missing_pct: 0.10   # Drop tickers with >10% missing data
+  max_forward_fill: 5     # Max consecutive NaN forward-fill days
+  winsorize_returns: 0.25 # Clip daily returns at ±25%
+
+features:
+  momentum:
+    xsmom_lookbacks: [63, 126, 252]   # Trading days
+    xsmom_skip: 21                     # Skip most recent month
+    tsmom_lookback: 252
+    tsmom_vol_target: 0.15
+  mean_reversion:
+    bollinger_window: 20
+    bollinger_num_std: 2.0
+    rsi_window: 14
+    reversal_window: 5
+    reversal_vol_window: 21
+  volatility:
+    ewma_halflife: 21
+    vol_of_vol_windows: [21, 63, 126]
+
+signals:
+  combination_method: "equal_weight"   # equal_weight | ic_weight | pca
+  rank_normalize: true
+  ic_lookback: 252                     # For IC-weighted combination
+
+portfolio:
+  method: "signal_proportional"        # signal_proportional | risk_parity | mean_variance
+  max_position_weight: 0.05            # 5% max single position
+  max_sector_weight: 0.25              # 25% max single sector
+  max_leverage: 2.0                    # Gross leverage cap (long-short needs >1.0)
+  turnover_penalty: 0.001              # For mean-variance regularization
+  rebalance_frequency: "daily"
+  weight_blend: 0.15                   # Blend target with prev weights (half-life ~4 days)
+
+execution:
+  fixed_cost_bps: 5.0                  # Per-side fixed cost
+  market_impact_bps: 2.0               # Almgren-Chriss sqrt impact coefficient (liquid large-caps)
+  min_trade_pct: 0.001                 # Min trade size as fraction of portfolio
+
+risk:
+  vol_target: 0.15                     # 15% annualized target vol
+  vol_lookback: 126                    # Days for realized vol estimate (longer = smoother scaling)
+  max_drawdown: 0.50                   # Circuit breaker threshold (catastrophic backstop only)
+  flat_days: 21                        # Days to stay flat after circuit breaker
+  grace_days: 63                       # Days after flat period where breaker cannot re-trigger
+  max_leverage: 2.0                    # Gross leverage cap after vol scaling
+
+backtest:
+  warmup_days: 252
+  walk_forward:
+    train_days: 756                    # 3 years
+    purge_days: 21                     # Gap between train and test
+    test_days: 252                     # 1 year
+  cross_validation:
+    n_splits: 5
+    purge_days: 21
+
+analytics:
+  risk_free_rate: 0.02                 # For Sharpe calculation
+  confidence_level: 0.95               # For VaR/CVaR
+  rolling_window: 252                  # Rolling metrics window

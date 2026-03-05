@@ -1,0 +1,43 @@
+======================================================================
+STRATEGY PERFORMANCE REPORT
+======================================================================
+Period: 2006-01-03 to 2024-12-30
+Assets: 110
+
+--- Performance Metrics ---
+Metric                Value
+--------------------  -------
+Total Return          -26.25%
+Annual Return         -1.59%
+Annual Volatility     7.14%
+Sharpe Ratio          -0.469
+Sortino Ratio         -0.598
+Max Drawdown          -42.57%
+Calmar Ratio          -0.037
+Win Rate              50.25%
+Profit Factor         0.963
+Skewness              0.092
+Kurtosis              11.738
+VaR (95%)             -0.0071
+CVaR (95%)            -0.0111
+Avg Daily Turnover    0.0836
+Annual Turnover       2107.0%
+Avg Daily Cost (bps)  1.25
+Annual Cost (bps)     313.8
+
+--- Statistical Tests ---
+Test                          Value
+----------------------------  -------
+Lo-Adjusted Sharpe            -0.459
+Lo Sharpe p-value             0.0000
+Autocorrelation Factor (η)    1.046
+Deflated Sharpe Ratio         0.0000
+DSR p-value                   1.0000
+Expected Max Sharpe (random)  0.017
+N trials tested               6
+ADF Statistic                 -21.901
+ADF p-value                   0.0000
+Returns Stationary            Yes
+
+--- Sanity Checks ---
+======================================================================
