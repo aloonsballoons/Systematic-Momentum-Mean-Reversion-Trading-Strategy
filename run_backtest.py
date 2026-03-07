@@ -96,19 +96,35 @@ def compute_signals(
     return combined
 
 
-def smooth_weights(weights: pd.DataFrame, blend: float) -> pd.DataFrame:
+def smooth_weights(
+    weights: pd.DataFrame, blend: float, rebalance_frequency: str = "daily"
+) -> pd.DataFrame:
     """Exponentially smooth weights to reduce turnover.
 
-    w_t = blend * target_t + (1 - blend) * w_{t-1}
+    w_t = blend * target_t + (1 - blend) * w_{t-1}   (rebalance days)
+    w_t = w_{t-1}                                      (non-rebalance days)
+
     Applied as the LAST step before the engine to capture all sources of turnover.
     """
-    if blend >= 1.0:
+    if blend >= 1.0 and rebalance_frequency == "daily":
         return weights
+
+    freq_map = {"daily": 1, "weekly": 5, "monthly": 21}
+    freq_days = freq_map.get(rebalance_frequency, 1)
+
+    rebal_mask = pd.Series(False, index=weights.index)
+    rebal_mask.iloc[::freq_days] = True
+
     smoothed = weights.copy()
     for i in range(1, len(smoothed)):
-        smoothed.iloc[i] = (
-            blend * weights.iloc[i] + (1 - blend) * smoothed.iloc[i - 1]
-        )
+        if rebal_mask.iloc[i]:
+            # Rebalance day: blend toward new target
+            smoothed.iloc[i] = (
+                blend * weights.iloc[i] + (1 - blend) * smoothed.iloc[i - 1]
+            )
+        else:
+            # Off-day: hold previous weight exactly (zero turnover)
+            smoothed.iloc[i] = smoothed.iloc[i - 1]
     return smoothed
 
 
@@ -128,7 +144,10 @@ def run_full_backtest(
     risk_adjusted = risk_mgr.apply(target_weights, returns)
 
     # Smooth final weights to control turnover (last step before engine)
-    final_weights = smooth_weights(risk_adjusted, cfg.portfolio.weight_blend)
+    # On non-rebalance days, holds previous weight exactly (zero turnover)
+    final_weights = smooth_weights(
+        risk_adjusted, cfg.portfolio.weight_blend, cfg.portfolio.rebalance_frequency
+    )
 
     # Run backtest
     engine = BacktestEngine(cfg.backtest, cfg.execution)

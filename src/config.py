@@ -72,7 +72,7 @@ class PortfolioConfig:
     max_leverage: float = 1.0
     turnover_penalty: float = 0.001
     rebalance_frequency: str = "daily"
-    weight_blend: float = 0.15  # Blend factor: w_t = blend*target + (1-blend)*w_{t-1}
+    weight_blend: float = 0.05  # Blend factor: w_t = blend*target + (1-blend)*w_{t-1}
 
 
 @dataclass(frozen=True)

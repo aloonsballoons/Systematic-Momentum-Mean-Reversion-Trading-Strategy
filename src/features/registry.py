@@ -32,9 +32,10 @@ def build_features(cfg: FeaturesConfig) -> list[Feature]:
         # get reinforced by both momentum AND Bollinger.
         BollingerMeanReversion(window=mr.bollinger_window, num_std=mr.bollinger_num_std),
 
-        # Short-term reversal (5-day horizon) — also complementary to momentum
+        # Short-term reversal (5-day horizon) — complementary to momentum
         ShortTermReversal(window=mr.reversal_window, vol_window=mr.reversal_vol_window),
 
+        # Note: TSMOM excluded — binary signal (sign only), redundant with CompositeMomentum.
         # Note: Individual XSMOMs excluded — composite already captures them.
         # Note: RSI_MR excluded — too similar to Bollinger at 14d vs 20d.
         # Note: EWMAVol and VolOfVol excluded — non-directional.

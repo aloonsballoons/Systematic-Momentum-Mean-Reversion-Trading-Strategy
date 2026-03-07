@@ -43,8 +43,8 @@ portfolio:
   max_sector_weight: 0.25              # 25% max single sector
   max_leverage: 2.0                    # Gross leverage cap (long-short needs >1.0)
   turnover_penalty: 0.001              # For mean-variance regularization
-  rebalance_frequency: "daily"
-  weight_blend: 0.15                   # Blend target with prev weights (half-life ~4 days)
+  rebalance_frequency: "weekly"
+  weight_blend: 0.05                   # Blend target with prev weights (half-life ~14 days)
 
 execution:
   fixed_cost_bps: 5.0                  # Per-side fixed cost
