@@ -29,18 +29,18 @@ pytest tests/ -v
 
 ### Alpha Signals
 
-| Signal | Formula | Type | Source |
-|--------|---------|------|--------|
-| XSMOM | `Return(t-S-L, t-S) / Vol(t, L)` | Momentum | Jegadeesh & Titman (1993) |
-| TSMOM | `sign(Return(t-L, t)) × vol_target / Vol(t, L)` | Momentum | Moskowitz et al. (2012) |
-| Composite MOM | `mean(rank(XSMOM_L))` for L in {63, 126, 252} | Momentum | - |
-| Bollinger MR | `-(Price - SMA) / (k × StdDev)` | Mean Reversion | Bollinger (1992) |
-| RSI MR | `-(RSI(14) - 50) / 50` | Mean Reversion | Wilder (1978) |
-| Short-Term Reversal | `-Return(t-5, t) / Vol(t, 21)` | Mean Reversion | Jegadeesh (1990) |
-| Vol-of-Vol | `Std(RealizedVol across windows)` | Volatility | - |
-| EWMA Vol | `sqrt(EWMA(returns², halflife))` | Volatility | RiskMetrics (1996) |
+| Signal | Formula | Type | Source | Active |
+|--------|---------|------|--------|--------|
+| Composite MOM | `mean(rank(XSMOM_L))` for L in {63, 126, 252} | Momentum | Jegadeesh & Titman (1993) | Yes |
+| TSMOM | `sign(Return(t-L, t)) × vol_target / Vol(t, L)` | Momentum | Moskowitz et al. (2012) | No |
+| Bollinger MR | `-(Price - SMA) / (k × StdDev)` | Mean Reversion | Bollinger (1992) | Yes |
+| Short-Term Reversal | `-Return(t-5, t) / Vol(t, 21)` | Mean Reversion | Jegadeesh (1990) | Yes |
+| XSMOM | `Return(t-S-L, t-S) / Vol(t, L)` | Momentum | Jegadeesh & Titman (1993) | No (captured by Composite) |
+| RSI MR | `-(RSI(14) - 50) / 50` | Mean Reversion | Wilder (1978) | No (too similar to Bollinger) |
+| Vol-of-Vol | `Std(RealizedVol across windows)` | Volatility | - | No (non-directional) |
+| EWMA Vol | `sqrt(EWMA(returns², halflife))` | Volatility | RiskMetrics (1996) | No (non-directional) |
 
-All signals use published academic formulas — no data mining on this dataset.
+All signals use published academic formulas — no data mining on this dataset. Active signals span 5d to 252d horizons for multi-frequency diversification.
 
 ### Signal Combination
 
@@ -52,19 +52,26 @@ All signals use published academic formulas — no data mining on this dataset.
 - Risk parity with signal tilt
 - Mean-variance with turnover regularization
 - Ledoit-Wolf shrinkage covariance estimation
-- Constraints: 5% max position, 25% max sector, 1.0x max leverage
+- Constraints: 5% max position, 25% max sector, 2.0x max leverage (long-short)
+- Weekly rebalancing with exponential weight blending to control turnover
 
 ### Transaction Costs
 
 - Fixed: 5 bps per side
-- Market impact: 10 bps × √(turnover) (Almgren-Chriss square-root law)
+- Market impact: 2 bps × √(turnover) (Almgren-Chriss square-root law, calibrated for liquid large-caps)
 - Minimum trade filter to avoid churn
 
 ### Risk Management
 
-- Volatility targeting: scale exposure to 15% annualized target
-- Drawdown circuit breaker: go flat when DD > 15%, stay flat 21 days
+- Volatility targeting: scale exposure to 15% annualized target (126-day lookback)
+- Drawdown circuit breaker: go flat when DD > 50% (catastrophic backstop), stay flat 21 days, 63-day grace period
 - All overlays use `.shift(1)` to avoid look-ahead bias
+
+### Turnover Control
+
+- **Weekly rebalancing**: integrated into `smooth_weights()` — on non-rebalance days, weights are held exactly constant (zero turnover)
+- **Exponential blending**: `w_t = 0.05 × target + 0.95 × w_{t-1}` on rebalance days only
+- Weight smoothing applied AFTER all risk overlays (vol targeting, drawdown breaker)
 
 ### Validation
 
@@ -80,9 +87,10 @@ All signals use published academic formulas — no data mining on this dataset.
 | Equal-weight signal combination | Most robust OOS; resists overfitting |
 | Walk-forward with purge gap | Never reports in-sample as results |
 | Deflated Sharpe Ratio | Adjusts for multiple testing |
-| 10 bps realistic costs + sensitivity | Bridges gap between backtest and reality |
+| 2 bps market impact (large-cap calibration) | Realistic for liquid universe |
 | Published academic signals only | Not data-mined from this dataset |
 | 1-day execution lag | Realistic trading latency |
+| Weekly rebalancing + weight blending | Controls turnover without separate filter step |
 
 ## Project Structure
 
@@ -108,7 +116,7 @@ All signals use published academic formulas — no data mining on this dataset.
 
 - **Sharpe**: 0.3–0.8 (higher suggests a bug)
 - **Max DD**: 15–30%
-- **Annual turnover**: 500–1500%
+- **Annual turnover**: 150–500% (with weekly rebalancing)
 - **OOS Sharpe**: ~0.5–0.8× in-sample Sharpe
 - **DSR < 0.95** with 6 trials indicates genuine signal
 
